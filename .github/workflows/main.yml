@@ -13,9 +13,10 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
-      - name: Configure git to rebase
-        run: git config pull.rebase true
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git pull && git push https://raannakasturi:$HF_TOKEN@huggingface.co/spaces/raannakasturi/streamora_backend main
+        run: |
+          git pull https://raannakasturi:$HF_TOKEN@huggingface.co/spaces/raannakasturi/streamora_backend main --rebase
+          git push https://raannakasturi:$HF_TOKEN@huggingface.co/spaces/raannakasturi/streamora_backend main
+
