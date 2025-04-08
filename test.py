@@ -2,7 +2,7 @@ from providers.auto_embed1 import AutoEmbed1
 from providers.auto_embed2 import AutoEmbed2
 from providers.two_embed import TwoEmbed
 import json
-imdbID = "tt14513804"
+imdbID = "822119"
 mediaType = "movie"
 title = "Captain America: Brave New World"
 year = "2025"

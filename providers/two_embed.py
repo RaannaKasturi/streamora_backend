@@ -72,7 +72,7 @@ class TwoEmbed:
                     'Referer': 'https://streamsrcs.2embed.cc/',
                 })
                 source = self.extract_video_source(response.content)
-                if source:
+                if source and source not in self.video_data_list:
                     self.video_data_list.append({
                         f"TWOEMBED_{len(self.video_data_list) + 1}": source
                     })

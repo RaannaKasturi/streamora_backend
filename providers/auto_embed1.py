@@ -23,7 +23,7 @@ class AutoEmbed1:
             decrypted_response.raise_for_status()
 
             video_source = decrypted_response.json().get("videoSource")
-            if video_source:
+            if video_source and video_source not in self.video_data_list:
                 self.video_data_list.append({
                     f"AUTOEMBED1_{len(self.video_data_list) + 1}" : video_source
                 })
