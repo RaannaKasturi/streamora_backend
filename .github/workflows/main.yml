@@ -16,4 +16,4 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push https://raannakasturi:$HF_TOKEN@huggingface.co/spaces/raannakasturi/streamora_backend main
+        run: git pull && git push https://raannakasturi:$HF_TOKEN@huggingface.co/spaces/raannakasturi/streamora_backend main
