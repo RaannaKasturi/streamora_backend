@@ -13,6 +13,8 @@ jobs:
         with:
           fetch-depth: 0
           lfs: true
+      - name: Configure git to rebase
+        run: git config pull.rebase true
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
