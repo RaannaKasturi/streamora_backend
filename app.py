@@ -1,47 +1,54 @@
+import asyncio
 import json
-import gradio as gr
+import urllib.parse
+from fastapi.params import Header
+from fastapi.responses import JSONResponse, PlainTextResponse
+import requests
+import fastapi
 
-from providers.auto_embed1 import AutoEmbed1
-from providers.auto_embed2 import AutoEmbed2
-from providers.two_embed import TwoEmbed
+app = fastapi.FastAPI()
 
-providers = [
-    AutoEmbed1(),
-    AutoEmbed2(),
-    TwoEmbed(),
-]
+# Define the root endpoint
+@app.get("/")
+def read_root():
+    return {"status": "ok"}
 
-def get_streams(imdbID, mediaType, title, year, season=None, episode=None):
-    video_data_list = []
-    for provider in providers:
-        video_data = provider.scrape(imdbID, mediaType, title, year, season, episode)
-        if video_data:
-            video_data_list.extend(video_data)
-    return json.dumps(video_data_list, indent=4)
+# Define the proxy endpoint -> https://hostname/proxy?url=stream_url&headers=headers&output=json/text
+@app.get("/proxy")
+async def proxy(
+    url: str = fastapi.Query(..., description="The target URL to fetch"),
+    headers: str = fastapi.Query(..., description="URL-encoded JSON headers"),
+    output: str = fastapi.Query("text", description="Output format: json or text"),
+    x_app_id: str = Header(None, convert_underscores=False)  # read "X-App-ID"
+):
+    # Validate App ID
+    if x_app_id != "eu.org.nayankasturi.streamora":
+        return JSONResponse({"error": "Unauthorized app"}, status_code=403)
 
-with gr.Blocks() as app:
-    gr.Markdown("# Streamora Backend")
-
-    def update_media_type(media_type):
-        if media_type == "movie":
-            return gr.update(visible=False), gr.update(visible=False)
+    try:
+        url = urllib.parse.unquote(url)
+        decoded_headers = urllib.parse.unquote(headers)
+        final_headers = json.loads(decoded_headers)
+        response = await asyncio.to_thread(requests.get, url, headers=final_headers)
+        if response.status_code == 200:
+            if output.lower() == "json":
+                try:
+                    return JSONResponse(response.json())
+                except json.JSONDecodeError:
+                    return JSONResponse({"error": "Response is not valid JSON"}, status_code=502)
+            return PlainTextResponse(response.text)
         else:
-            return gr.update(visible=True), gr.update(visible=True)
+            return JSONResponse(
+                {"error": f"{response.status_code} - {response.reason}"},
+                status_code=response.status_code
+            )
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON format for headers."}, status_code=400)
+    except requests.RequestException as e:
+        return JSONResponse({"error": str(e)}, status_code=502)
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=500)
 
-    
-    with gr.Row():
-        with gr.Column():
-            # imdbID, mediaType, title, year, season, episode
-            imdbID = gr.Textbox(label="IMDB ID", placeholder="tt14513804")
-            mediaType = gr.Dropdown(label="Media Type", choices=["movie", "tv"], value="movie")
-            title = gr.Textbox(label="Title", placeholder="Captain America: Brave New World")
-            year = gr.Textbox(label="Year", placeholder="2025")
-            with gr.Row():
-                season = gr.Textbox(label="Season", placeholder="1", visible=False)
-                episode = gr.Textbox(label="Episode", placeholder="1", visible=False)
-            mediaType.change(update_media_type, inputs=mediaType, outputs=[season, episode])
-        output = gr.TextArea(label="Output", placeholder="Output will be shown here", interactive=False, show_copy_button=True)
-    submit = gr.Button(value="Submit")
-    submit.click(fn=get_streams, inputs=[imdbID, mediaType, title, year, season, episode], outputs=[output])
-    
-app.queue(default_concurrency_limit=500).launch(show_api=False, show_error=True)
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="localhost", port=8000)
